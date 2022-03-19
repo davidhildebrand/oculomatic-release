@@ -23,19 +23,54 @@ void ofApp::setup(){
 
 	// NiDAQmx setup
 	DAQmxCreateTask("", &taskHandle);
-	DAQmxCreateAOVoltageChan(taskHandle, "Dev1/ao0:1", "", aout_min, aout_max, DAQmx_Val_Volts, NULL); // First two channels
+	DAQmxCreateAOVoltageChan(taskHandle, "Dev1/ao2:3", "", aout_min, aout_max, DAQmx_Val_Volts, NULL); // First two channels
 	DAQmxStartTask(taskHandle);
 
-	// Connect to the camera
-	error = camera.Connect(0);
+	BusManager busMgr;
+	unsigned int camera_sn = 16386588;
+	PGRGuid guid;
+	std::stringstream camera_sn_str;
+	camera_sn_str << camera_sn;
+	
+	if (camera_sn != 0)  // If specific camera serial number is specified, try to connect to it
+	 {
+
+		error = busMgr.GetCameraFromSerialNumber(camera_sn, &guid);
+		if (error == PGRERROR_OK) {
+			std::string msg = "Found camera with serial number " + camera_sn_str.str() + ".";
+			std::cout << msg << std::endl;
+		}
+		else 
+		{
+			std::string msg = "Could not find camera with serial number: " + camera_sn_str.str() + ".";
+			std::cout << msg << std::endl;
+			std::cout << "Attempting to connect to first available camera." << std::endl;
+			error = busMgr.GetCameraFromIndex(0, &guid);
+			if (error != PGRERROR_OK) {
+				std::cout << "Failed to connect to first available camera. Exiting." << std::endl;
+				return;
+			}
+		}
+	}
+	else  // Connect to the first available camera
+	{
+		std::cout << "Attempting to connect to first available camera." << std::endl;
+		error = busMgr.GetCameraFromIndex(0, &guid);
+		if (error != PGRERROR_OK) {
+			std::cout << "Failed to connect to first available camera. Exiting." << std::endl;
+			return;
+		}
+	}
+
+	error = camera.Connect(&guid);
 	if (error != PGRERROR_OK) {
-		std::cout << "failed to connect to camera..." << std::endl;
+		std::cout << "Failed to connect to the camera." << std::endl;
 		return;
 	}
 
 	error = camera.GetCameraInfo(&camInfo);
 	if (error != PGRERROR_OK) {
-		std::cout << "failed to get camera info from camera" << std::endl;
+		std::cout << "Failed to get camera info from camera." << std::endl;
 		return;
 	}
 
