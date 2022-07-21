@@ -23,7 +23,7 @@ void ofApp::setup(){
 
 	// NiDAQmx setup
 	DAQmxCreateTask("", &taskHandle);
-	DAQmxCreateAOVoltageChan(taskHandle, "Dev1/ao2:3", "", aout_min, aout_max, DAQmx_Val_Volts, NULL); // First two channels
+	DAQmxCreateAOVoltageChan(taskHandle, "MarmoEye_USB6001/ao0:2", "", aout_min, aout_max, DAQmx_Val_Volts, NULL);
 	DAQmxStartTask(taskHandle);
 
 	BusManager busMgr;
