@@ -74,17 +74,72 @@ void ofApp::setup(){
 		return;
 	}
 
-	std::cout << camInfo.vendorName << " "
+	/*
+	std::cout << "Camera: " << camInfo.vendorName << " "
 		<< camInfo.modelName << " "
 		<< camInfo.serialNumber << std::endl;
 
+	VideoMode currVideoMode;
+	FrameRate currFrameRate;
+	error = camera.GetVideoModeAndFrameRate(&currVideoMode, &currFrameRate);
+	if (error != PGRERROR_OK)
+	{
+		std::cout << "Unable to retrieve camera video mode and frame rate." << std::endl;
+		return;
+	}
+	std::cout << "Video mode " << currVideoMode << ", frame rate "
+		<< currFrameRate << std::endl;
+	*/
+
+	Format7ImageSettings format7ImageSettings;
+	unsigned int packetSize;
+	float percentage;
+	error = camera.GetFormat7Configuration(&format7ImageSettings, &packetSize, &percentage);
+	if (error != PGRERROR_OK) {
+		std::cout << "Unable to retrieve Format7 custom image mode settings from camera. " << std::endl;
+		return;
+	}
+
+	unsigned int width = 384;
+	unsigned int height = 242;
+	bool supported;
+	Format7Info format7Info;
+	format7ImageSettings.mode = MODE_0;
+	format7ImageSettings.pixelFormat = PIXEL_FORMAT_RAW8;
+	format7Info.mode = format7ImageSettings.mode;
+	error = camera.GetFormat7Info(&format7Info, &supported);
+	left = (left / format7Info.offsetHStepSize) * format7Info.offsetHStepSize;
+	top = (top / format7Info.offsetVStepSize) * format7Info.offsetVStepSize;
+	width = (width / format7Info.imageHStepSize) * format7Info.imageHStepSize;
+	height = (height / format7Info.imageVStepSize) * format7Info.imageVStepSize;
+	format7ImageSettings.offsetX = left;
+	format7ImageSettings.offsetY = top;
+	format7ImageSettings.width = width;
+	format7ImageSettings.height = height;
+
+	bool valid;
+	Format7PacketInfo f7pInfo;
+	error = camera.ValidateFormat7Settings(&format7ImageSettings, &valid, &f7pInfo);
+	if (!valid) {
+		std::cout << "Unable to validate custom video mode parameters." << std::endl;
+		return;
+	}
+	error = camera.SetFormat7Configuration(&format7ImageSettings, f7pInfo.maxBytesPerPacket);
+	if (error != PGRERROR_OK) {
+		std::cout << "Unable to set custom video mode parameters." << std::endl;
+		return;
+	}
+
+	std::cout << "Set custom video mode to capture " << width << "x" << height << " frames with top left corner (" << left << "," << top << ")." << std::endl;
+	std::cout << "Set mode " << format7ImageSettings.mode << " and packet size " << packetSize << " (" << percentage << "%)." << std::endl;
+
 	error = camera.StartCapture();
 	if (error == PGRERROR_ISOCH_BANDWIDTH_EXCEEDED) {
-		std::cout << "bandwidth exceeded" << std::endl;
+		std::cout << "Bandwidth exceeded." << std::endl;
 		return;
 	}
 	else if (error != PGRERROR_OK) {
-		std::cout << "failed to start image capture" << std::endl;
+		std::cout << "Failed to start image capture." << std::endl;
 		return;
 	}
 
@@ -179,7 +234,7 @@ void ofApp::update(){
 //--------------------------------------------------------------
 void ofApp::draw(){
     ofSetColor(255,255,255);
-    ofDrawBitmapString(ofToString(ofGetFrameRate())+"fps", 10, monoImg.getHeight() + 20);
+    ofDrawBitmapString(ofToString(ofGetFrameRate()) + "fps", 10, monoImg.getHeight() + 20);
     ofDrawBitmapString("L: load settings", 10, monoImg.getHeight() + 35);
     ofDrawBitmapString("S: save settings", 10, monoImg.getHeight() + 50);
 	ofDrawBitmapString("X: center voltage", 10, monoImg.getHeight() + 65);
@@ -232,13 +287,16 @@ void ofApp::keyReleased(int key){
     }
     else if(key == 's'){
         gui.saveToFile("settings.xml");
+		std::cout << "Saved settings." << std::endl;
     }
     else if(key == 'l'){
         gui.loadFromFile("settings.xml");
+		std::cout << "Loaded last saved settings." << std::endl;
     }
 	else if (key == 'x') {
 		centerOffsetX = aout[0];
 		centerOffsetY = aout[1];
+		std::cout << "Centered voltage." << std::endl;
 	}
 	else if (key == 'p') {
 		pHide = !pHide;
