@@ -100,6 +100,8 @@ void ofApp::setup(){
 		return;
 	}
 
+	unsigned int left = 648;
+	unsigned int top = 432;
 	unsigned int width = 384;
 	unsigned int height = 242;
 	bool supported;
